@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TSP Memories 一覧</title>
+  <!-- 開発用の簡易スタイル（本番はビルドCSS推奨） -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-b from-amber-50 to-sky-50">
+  <div class="max-w-5xl mx-auto px-4 py-6">
+    <header class="flex items-center justify-between mb-6">
+      <h1 class="text-xl font-bold">思い出一覧</h1>
+      <div class="flex items-center gap-2">
+        <span id="whoami" class="text-sm text-black/60"></span>
+        <button id="loginBtn"  class="px-3 py-1 rounded-lg border hover:bg-black/5 text-sm">Googleでログイン</button>
+        <button id="logoutBtn" class="px-3 py-1 rounded-lg border hover:bg-black/5 text-sm hidden">ログアウト</button>
+      </div>
+    </header>
+
+    <div id="notice" class="text-sm text-red-600 mb-3"></div>
+
+    <!-- 一覧：空のときメッセージ -->
+    <div id="empty" class="rounded-2xl border border-dashed p-6 text-center text-black/60 hidden">
+      まだ保存がありません。
+    </div>
+
+    <!-- 一覧リスト -->
+    <ul id="list" class="grid grid-cols-2 md:grid-cols-3 gap-4"></ul>
+
+    <!-- ページング -->
+    <div class="flex justify-center mt-6">
+      <button id="moreBtn" class="px-4 py-2 rounded-xl border hover:bg-black/5 hidden">さらに読み込む</button>
+    </div>
+  </div>
+
+  <!-- アプリ本体（ES Modules） -->
+  <script type="module">
+    // ★ あなたの firebase-init.js を利用（中で initializeApp 済み & 永続化も完了させる）
+    import { app, auth, authReady } from "./firebase-init.js";
+
+    import {
+      GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
+    } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+
+    import {
+      getFirestore, collection, query, where, orderBy, limit, startAfter, getDocs, doc, deleteDoc
+    } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+    // 永続化完了を待つ（重要）
+    await authReady;
+
+    // Firestore インスタンス
+    const db = getFirestore(app);
+
+    // UI 要素
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const whoami = document.getElementById("whoami");
+    const emptyEl = document.getElementById("empty");
+    const listEl = document.getElementById("list");
+    const moreBtn = document.getElementById("moreBtn");
+    const notice = document.getElementById("notice");
+
+    // 状態
+    let currentUser = null;
+    let cursor = null;
+    const pageSize = 12;
+
+    function setNotice(msg) {
+      notice.textContent = msg || "";
+    }
+
+    function setAuthUI(user) {
+      currentUser = user;
+      if (user) {
+        whoami.textContent = `${user.displayName || "ユーザー"} (${user.email || user.uid})`;
+        loginBtn.classList.add("hidden");
+        logoutBtn.classList.remove("hidden");
+      } else {
+        whoami.textContent = "未ログイン";
+        loginBtn.classList.remove("hidden");
+        logoutBtn.classList.add("hidden");
+      }
+    }
+
+    function clearList() {
+      listEl.innerHTML = "";
+      emptyEl.classList.add("hidden");
+      moreBtn.classList.add("hidden");
+      cursor = null;
+    }
+
+    function renderItems(docs) {
+      for (const d of docs) {
+        const data = d.data();
+        const li = document.createElement("li");
+        li.className = "rounded-2xl bg-white/70 border shadow p-3";
+        const title = (data.title || "(無題)");
+        li.innerHTML = `
+          <div class="font-semibold truncate">${title}</div>
+          <div class="mt-3 flex justify-between text-sm">
+            <button class="underline" data-del="${d.id}">削除</button>
+          </div>
+        `;
+        listEl.appendChild(li);
+
+        // 削除ボタン
+        li.querySelector("[data-del]").addEventListener("click", async () => {
+          if (!confirm("削除しますか？")) return;
+          await deleteDoc(doc(db, "memories", d.id));
+          li.remove();
+          if (!listEl.children.length) emptyEl.classList.remove("hidden");
+        });
+      }
+    }
+
+    async function loadFirst() {
+      clearList();
+      setNotice("読み込み中…");
+      try {
+        const col = collection(db, "memories");
+        const q = query(
+          col,
+          where("ownerUid", "==", currentUser.uid),
+          orderBy("createdAt", "desc"),
+          limit(pageSize)
+        );
+        const snap = await getDocs(q);
+        if (snap.empty) {
+          emptyEl.classList.remove("hidden");
+        } else {
+          renderItems(snap.docs);
+          cursor = snap.docs.at(-1) || null;
+          if (cursor) moreBtn.classList.remove("hidden");
+        }
+      } catch (e) {
+        console.error(e);
+        setNotice("読み込みに失敗しました。");
+      } finally {
+        setNotice("");
+      }
+    }
+
+    async function loadMore() {
+      if (!cursor) return;
+      setNotice("読み込み中…");
+      try {
+        const col = collection(db, "memories");
+        const q = query(
+          col,
+          where("ownerUid", "==", currentUser.uid),
+          orderBy("createdAt", "desc"),
+          startAfter(cursor),
+          limit(pageSize)
+        );
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          renderItems(snap.docs);
+          cursor = snap.docs.at(-1) || null;
+          if (!cursor) moreBtn.classList.add("hidden");
+        } else {
+          moreBtn.classList.add("hidden");
+        }
+      } catch (e) {
+        console.error(e);
+        setNotice("読み込みに失敗しました。");
+      } finally {
+        setNotice("");
+      }
+    }
+
+    // 認証UIイベント
+    loginBtn.addEventListener("click", async () => {
+      try {
+        await signInWithPopup(auth, new GoogleAuthProvider()); // ポップアップ方式
+      } catch (e) {
+        console.error(e);
+        alert("ログインに失敗しました。ポップアップがブロックされていないか確認してください。");
+      }
+    });
+
+    logoutBtn.addEventListener("click", async () => {
+      await signOut(auth);
+    });
+
+    moreBtn.addEventListener("click", loadMore);
+
+    // 認証監視
+    onAuthStateChanged(auth, (user) => {
+      setAuthUI(user);
+      if (user) {
+        loadFirst();
+      } else {
+        clearList();
+        emptyEl.classList.add("hidden");
+        setNotice("ログインしてください。");
+      }
+    });
+  </script>
+</body>
+</html>

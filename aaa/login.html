@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ログイン | TSP Memories</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module" src="./firebase-init.js"></script>
+</head>
+  <body class="min-h-screen bg-gradient-to-b from-amber-50 to-sky-50 flex items-center justify-center p-6">
+    <div class="max-w-md w-full bg-white/80 backdrop-blur rounded-2xl shadow-lg border border-white/70 p-6">
+      <h1 class="text-2xl font-bold mb-2">TSP Memories</h1>
+      <p class="text-sm text-black/60 mb-6">Google アカウントでログインしてください。</p>
+
+      <button id="googleBtn" class="w-full flex items-center justify-center gap-3 py-2.5 rounded-xl border border-black/10 hover:bg-black/5 transition">
+        <img alt="" src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-5 h-5" />
+        <span class="font-medium">Googleでログイン</span>
+      </button>
+
+      <p id="status" class="text-xs text-black/60 mt-4"></p>
+    </div>
+
+      <script type="module">
+        import {
+          GoogleAuthProvider,
+          signInWithPopup,
+          onAuthStateChanged,
+        } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+        import { auth, authReady } from "./firebase-init.js";
+
+        await authReady;
+        console.log("[login] authReady:", auth);
+      
+        const btn = document.getElementById("googleBtn");
+        const status = document.getElementById("status");
+        const NEXT_URL = "./app-guard.js"; 
+
+
+        // 2) すでにログイン済みなら即遷移（通常読み込み時のケア）
+        onAuthStateChanged(auth, (user) => {
+          if (user) {
+            status.textContent = "ログイン済みです。移動します…";
+            location.replace(NEXT_URL);
+          }
+        });
+
+      // クリックでポップアップ開始（ここだけで完結）
+      btn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        btn.disabled = true;
+        status.textContent = "ポップアップを開いています…";
+        try {
+          const result = await signInWithPopup(auth, provider);
+          if (result?.user) {
+            status.textContent = "ログイン成功。移動します…";
+            location.replace(NEXT_URL);
+          }
+        } catch (err) {
+          console.error("[login] signInWithPopup error:", err);
+          // よくあるエラーの丁寧な表示
+          if (err?.code === "auth/popup-closed-by-user") {
+            status.textContent = "ポップアップが閉じられました。もう一度お試しください。";
+          } else if (err?.code === "auth/cancelled-popup-request") {
+            status.textContent = "別のポップアップ操作が進行中でした。少し待って再実行してください。";
+          } else if (err?.code === "auth/popup-blocked") {
+            status.textContent = "ポップアップがブロックされました。ポップアップを許可して再試行してください。";
+          } else {
+            status.textContent = "ログインに失敗しました。";
+          }
+        } finally {
+          btn.disabled = false;
+        }
+      });
+     
+
+
+
+      </script>
+
+  </body>
+</html>

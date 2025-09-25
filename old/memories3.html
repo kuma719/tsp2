@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TSP Memories 一覧</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-b from-amber-50 to-sky-50">
+  <div class="max-w-6xl mx-auto px-4 py-6">
+    <!-- Header -->
+    <header class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+      <h1 class="text-xl font-bold">思い出一覧</h1>
+      <div class="flex items-center gap-2">
+        <span id="whoami" class="text-sm text-black/60">未ログイン</span>
+        <button id="loginBtn"  class="px-3 py-1 rounded-lg border hover:bg-black/5 text-sm">Googleでログイン</button>
+        <button id="createBtn" class="px-3 py-1 rounded-lg border hover:bg-black/5 text-sm hidden">新規作成</button>
+        <button id="logoutBtn" class="px-3 py-1 rounded-lg border hover:bg-black/5 text-sm hidden">ログアウト</button>
+      </div>
+    </header>
+
+    <!-- Toolbar -->
+    <section class="bg-white/70 border rounded-2xl shadow p-3 mb-4">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+        <div class="md:col-span-2">
+          <label class="text-xs text-black/60 block mb-1">キーワード（タイトル・本文を含む：ローカル絞り込み）</label>
+          <input id="q" placeholder="例: 立山, ます寿司…" class="w-full rounded-lg border px-3 py-2 bg-white/80 outline-none"/>
+        </div>
+        <div>
+          <label class="text-xs text-black/60 block mb-1">タグで絞り込み（サーバーサイド）</label>
+          <select id="tag" class="w-full rounded-lg border px-3 py-2 bg-white/80 outline-none">
+            <option value="">— すべて —</option>
+          </select>
+        </div>
+        <div class="flex gap-2">
+          <button id="apply" class="flex-1 rounded-lg border px-3 py-2 hover:bg-black/5">適用</button>
+          <button id="clear" class="flex-1 rounded-lg border px-3 py-2 hover:bg-black/5">クリア</button>
+        </div>
+      </div>
+      <p class="text-[11px] text-black/50 mt-2">※ タグ絞り込みは Firestore クエリを使います（初回は索引作成リンクが出る場合があります）。検索は読み込み済みデータのローカル絞り込みです。</p>
+    </section>
+
+    <div id="notice" class="text-sm text-red-600 mb-3"></div>
+
+    <!-- Empty -->
+    <div id="empty" class="rounded-2xl border border-dashed p-6 text-center text-black/60 hidden">
+      まだ保存がありません。
+    </div>
+
+    <!-- Cards -->
+    <ul id="list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></ul>
+
+    <!-- Pager -->
+    <div class="flex justify-center mt-6">
+      <button id="moreBtn" class="px-4 py-2 rounded-xl border hover:bg-black/5 hidden">さらに読み込む</button>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div id="modal" class="fixed inset-0 bg-black/40 hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl shadow-xl max-w-2xl w-full overflow-hidden">
+      <div class="flex items-center justify-between px-4 py-3 border-b">
+        <h3 id="modalTitle" class="font-semibold">詳細</h3>
+        <button id="modalClose" class="px-2 py-1 rounded-md border hover:bg-black/5">閉じる</button>
+      </div>
+      <div id="modalBody" class="p-4 text-sm max-h-[70vh] overflow-auto"></div>
+    </div>
+  </div>
+
+    <!-- Edit Modal -->
+  <div id="editModal" class="fixed inset-0 bg-black/40 hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl shadow-xl max-w-2xl w-full overflow-hidden">
+      <div class="flex items-center justify-between px-4 py-3 border-b">
+        <h3 class="font-semibold">メモを編集</h3>
+        <button id="editClose" class="px-2 py-1 rounded-md border hover:bg-black/5">閉じる</button>
+      </div>
+      <form id="editForm" class="p-4 grid gap-3 text-sm">
+        <input type="hidden" id="editId" />
+        <label class="grid gap-1">
+          <span class="text-black/60">タイトル</span>
+          <input id="editTitle" class="rounded-lg border px-3 py-2 bg-white/80 outline-none"/>
+        </label>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <label class="grid gap-1">
+            <span class="text-black/60">行き先</span>
+            <input id="editDest" class="rounded-lg border px-3 py-2 bg-white/80 outline-none"/>
+          </label>
+          <label class="grid gap-1">
+            <span class="text-black/60">日付</span>
+            <input id="editDate" type="date" class="rounded-lg border px-3 py-2 bg-white/80 outline-none"/>
+          </label>
+          <label class="grid gap-1">
+            <span class="text-black/60">ムード</span>
+            <input id="editMood" class="rounded-lg border px-3 py-2 bg-white/80 outline-none" placeholder="excited / happy など"/>
+          </label>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <label class="grid gap-1">
+            <span class="text-black/60">天気</span>
+            <input id="editWeather" class="rounded-lg border px-3 py-2 bg-white/80 outline-none" placeholder="晴れ / 28℃ など"/>
+          </label>
+          <label class="grid gap-1">
+            <span class="text-black/60">タグ（カンマ区切り）</span>
+            <input id="editTags" class="rounded-lg border px-3 py-2 bg-white/80 outline-none" placeholder="#富山, #立山"/>
+          </label>
+        </div>
+        <label class="grid gap-1">
+          <span class="text-black/60">本文</span>
+          <textarea id="editMessage" rows="4" class="rounded-lg border px-3 py-2 bg-white/80 outline-none"></textarea>
+        </label>
+
+        <div id="editNotice" class="text-xs text-red-600"></div>
+
+        <div class="flex justify-end gap-2 pt-2 border-t">
+          <button type="button" id="editCancel" class="px-3 py-2 rounded-lg border hover:bg-black/5">キャンセル</button>
+          <button type="submit" class="px-3 py-2 rounded-lg border bg-black/80 text-white hover:bg-black">
+            保存する
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+  <script type="module">
+    import { app, auth, authReady } from "./firebase-init.js";
+    import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+      from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import {
+      getFirestore, collection, query, where, orderBy, limit, startAfter, getDocs, doc, deleteDoc,updateDoc, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+    await authReady;
+    const db = getFirestore(app);
+
+    // Elements
+    const whoami   = document.getElementById("whoami");
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn= document.getElementById("logoutBtn");
+    const createBtn= document.getElementById("createBtn");
+    const listEl   = document.getElementById("list");
+    const emptyEl  = document.getElementById("empty");
+    const moreBtn  = document.getElementById("moreBtn");
+    const notice   = document.getElementById("notice");
+    const qInput   = document.getElementById("q");
+    const tagSel   = document.getElementById("tag");
+    const applyBtn = document.getElementById("apply");
+    const clearBtn = document.getElementById("clear");
+
+    const modal    = document.getElementById("modal");
+    const modalBody= document.getElementById("modalBody");
+    const modalTitle= document.getElementById("modalTitle");
+    const modalClose= document.getElementById("modalClose");
+
+    // --- Edit modal references ---
+    const editModal   = document.getElementById("editModal");
+    const editForm    = document.getElementById("editForm");
+    const editClose   = document.getElementById("editClose");
+    const editCancel  = document.getElementById("editCancel");
+    const editNotice  = document.getElementById("editNotice");
+
+    const editId      = document.getElementById("editId");
+    const editTitle   = document.getElementById("editTitle");
+    const editDest    = document.getElementById("editDest");
+    const editDate    = document.getElementById("editDate");
+    const editMood    = document.getElementById("editMood");
+    const editWeather = document.getElementById("editWeather");
+    const editTags    = document.getElementById("editTags");
+    const editMessage = document.getElementById("editMessage");
+
+    // State
+    let user = null;
+    let cursor = null;
+    const pageSize = 12;
+    let currentDocs = [];  // 今ページで取得済み（ローカル検索用）
+    let selectedTag = "";  // サーバーサイドのタグ絞り込み
+    const DEFAULT_THUMB = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=800&auto=format&fit=crop";
+
+    function setNotice(msg) { notice.textContent = msg || ""; }
+    function setAuthUI(u) {
+      user = u;
+      if (u) {
+        whoami.textContent = `${u.displayName || "ユーザー"}`;
+        loginBtn.classList.add("hidden");
+        createBtn.classList.remove("hidden");
+        logoutBtn.classList.remove("hidden");
+      } else {
+        whoami.textContent = "未ログイン";
+        loginBtn.classList.remove("hidden");
+        createBtn.classList.add("hidden");
+        logoutBtn.classList.add("hidden");
+      }
+    }
+    function clearList() {
+      listEl.innerHTML = "";
+      currentDocs = [];
+      emptyEl.classList.add("hidden");
+      moreBtn.classList.add("hidden");
+      cursor = null;
+    }
+
+    // helpers
+    function tsToString(ts) {
+      try {
+        if (!ts) return "";
+        const d = ts.toDate ? ts.toDate() : new Date(ts);
+        return d.toLocaleString();
+      } catch { return ""; }
+    }
+
+    function text(v){ return (v ?? "").toString(); }
+    function containsCI(hay, needle){
+      return text(hay).toLowerCase().includes(text(needle).toLowerCase());
+    }
+
+    function mkTagChip(t) {
+      const span = document.createElement("span");
+      span.className = "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-black/5 hover:bg-black/10 cursor-pointer";
+      span.textContent = t;
+      span.addEventListener("click", () => {
+        tagSel.value = t;
+        selectedTag = t;
+        loadFirst();
+      });
+      return span;
+    }
+
+    function cardFor(docSnap) {
+      const d = docSnap.data();
+      const li = document.createElement("li");
+      li.className = "rounded-2xl bg-white/70 border shadow overflow-hidden group";
+
+      const thumb = pickThumb(d.media, li); 
+      const created = tsToString(d.createdAt);
+      const mood = d.mood ? `<span class="px-2 py-0.5 text-[11px] rounded-full bg-amber-100 border">${d.mood}</span>` : "";
+
+      li.innerHTML = `
+        <div class="relative">
+          <img data-thumb src="${thumb}" alt="" class="h-40 w-full object-cover">
+          <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition"></div>
+          <div class="absolute left-3 bottom-3 text-white drop-shadow space-y-0.5">
+            <div class="font-semibold truncate max-w-[18rem]">${text(d.title) || "(無題)"}</div>
+            <div class="text-[12px] opacity-90">${text(d.destination) || ""} ${d.date ? "・" + d.date : ""}</div>
+          </div>
+        </div>
+        <div class="p-3">
+          <div class="flex items-center justify-between gap-2">
+            <div class="text-[12px] text-black/60 truncate">作成: ${created}</div>
+            <div>${mood}</div>
+          </div>
+          <div class="mt-2 line-clamp-2 text-sm text-black/80">${text(d.message)}</div>
+          <div class="mt-2 flex flex-wrap gap-1" data-tags></div>
+          <div class="mt-3 flex items-center justify-between text-sm">
+            <button class="underline" data-open>詳細</button>
+            <button class="underline" data-edit>編集</button>
+            <button class="underline text-red-600" data-del>削除</button>
+          </div>
+        </div>
+      `;
+
+      const tagWrap = li.querySelector("[data-tags]");
+      (Array.isArray(d.tags) ? d.tags : []).slice(0, 6).forEach(t => tagWrap.appendChild(mkTagChip(t)));
+
+      // open modal
+      li.querySelector("[data-open]").addEventListener("click", () => openModal(docSnap));
+      // open edit modal（編集）
+      li.querySelector("[data-edit]").addEventListener("click", () => openEditModal(docSnap));
+      // delete
+      li.querySelector("[data-del]").addEventListener("click", async () => {
+        if (!confirm("削除しますか？")) return;
+        await deleteDoc(doc(db, "memories", docSnap.id));
+        li.remove();
+        if (!listEl.children.length) emptyEl.classList.remove("hidden");
+      });
+
+      return li;
+    }
+
+    function pickThumb(media, liEl) {
+      // 初期はプレースホルダ
+      const placeholder = DEFAULT_THUMB;
+
+      if (Array.isArray(media)) {
+        const first = media.find(m => m.assetId);
+        if (first) {
+          // 非同期で署名URLを取得して、imgタグの src を差し替え
+          fetchSignedUrl(first.assetId)
+            .then(({ url, thumbUrl }) => {
+              const imgEl = liEl.querySelector("img[data-thumb]");
+              if (imgEl) {
+                imgEl.src = thumbUrl || url || DEFAULT_THUMB;
+              }
+            })
+            .catch(err => {
+              console.error("サムネ署名URL取得失敗", err);
+            });
+        }
+      }
+
+      return placeholder; // 最初はデフォルトを返す
+    }
+
+async function fetchSignedUrl(assetId) {
+  const idToken = await auth.currentUser.getIdToken();
+  const res = await fetch(
+    "https://asia-northeast1-toyama-sticker-project.cloudfunctions.net/getSignedDownloadUrl",
+    {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${idToken}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ assetId })
+    }
+  );
+  if (!res.ok) throw new Error("署名URL取得失敗");
+  return res.json(); // {url, thumbUrl}
+}
+
+
+  async function openModal(docSnap) {
+    const d = docSnap.data();
+    modalTitle.textContent = d.title || "(無題)";
+    const entries = Array.isArray(d.entries) ? d.entries : [];
+    const media = Array.isArray(d.media) ? d.media : [];
+
+    const esc = (s="") => String(s).replaceAll("<","&lt;").replaceAll(">","&gt;");
+
+    // ここを「url を見て分岐する」実装から置き換え
+    const mediaHtml = media.map(m => {
+      const aid = esc(m?.assetId || "");
+      const t   = esc(m?.type || "");
+      const cap = esc(m?.caption || "");
+      return `
+        <div class="rounded-lg border w-full h-28 flex items-center justify-center bg-black/5"
+            data-asset="${aid}" data-type="${t}" data-cap="${cap}">
+          <span class="text-xs text-black/60">署名URL取得中… (assetId: ${aid})</span>
+        </div>`;
+    }).join("");
+
+    modalBody.innerHTML = `
+      <div class="grid gap-3">
+        <div><span class="text-black/60">行き先</span><div>${esc(d.destination)}</div></div>
+        <div><span class="text-black/60">日付</span><div>${esc(d.date)}</div></div>
+        <div><span class="text-black/60">ムード</span><div>${esc(d.mood)}</div></div>
+        <div><span class="text-black/60">天気</span><div>${esc(d.weather)}</div></div>
+        <div><span class="text-black/60">タグ</span>
+          <div class="flex flex-wrap gap-1">
+            ${(d.tags||[]).map(t=>`<span class="px-2 py-0.5 rounded-full text-xs bg-black/5">${esc(t)}</span>`).join(" ")}
+          </div>
+        </div>
+        <div><span class="text-black/60">本文</span><div class="whitespace-pre-wrap">${esc(d.message)}</div></div>
+        <div><span class="text-black/60">タイムライン</span>
+          <ul class="mt-1 space-y-1 text-sm">
+            ${entries.map(e=>`<li><span class="text-black/60">${esc(e.time)}:</span> ${esc(e.text)}</li>`).join("")}
+          </ul>
+        </div>
+        <div><span class="text-black/60">メディア</span>
+          <div class="mt-2 grid grid-cols-2 gap-2">
+            ${mediaHtml}
+          </div>
+        </div>
+      </div>
+    `;
+    modal.classList.remove("hidden");
+    modal.classList.add("flex");
+
+    for (const m of media) {
+      if (!m.assetId) continue;
+      try {
+        const { url, thumbUrl } = await fetchSignedUrl(m.assetId);
+        const el = modalBody.querySelector(`[data-asset="${m.assetId}"]`);
+        if (!el) continue;
+
+        const cap = el.dataset.cap || "";
+        const isVideo = (m.type === "video") || (m.contentType || "").startsWith("video/");
+
+        if (isVideo) {
+          el.outerHTML = `<video src="${url}" controls class="rounded-lg border w-full h-28 object-cover" title="${cap}"></video>`;
+          console.debug("[modal] set video src", m.assetId, url);
+        } else {
+          el.outerHTML = `<img src="${thumbUrl || url}" alt="${cap}" class="rounded-lg border object-cover w-full h-28"/>`;
+          console.debug("[modal] set image src", m.assetId, thumbUrl || url);
+        }
+      } catch (e) {
+        console.error("署名URL取得失敗", m.assetId, e);
+      }
+    }
+ }
+
+
+    modalClose.addEventListener("click", ()=> modal.classList.add("hidden"));
+    modal.addEventListener("click", (e)=>{ if(e.target===modal) modal.classList.add("hidden") });
+
+    // data flows
+    function renderDocs(docs) {
+      docs.forEach(ds => listEl.appendChild(cardFor(ds)));
+    }
+    function rebuildTagOptions() {
+      // 取得済みデータからタグ一覧（軽量のためサーバー集計はしない）
+      const set = new Set();
+      currentDocs.forEach(ds => (Array.isArray(ds.data().tags)? ds.data().tags:[]).forEach(t => set.add(t)));
+      const cur = tagSel.value;
+      tagSel.innerHTML = `<option value="">— すべて —</option>` + [...set].sort().map(t => `<option value="${t}">${t}</option>`).join("");
+      tagSel.value = cur || "";
+    }
+    function applyLocalSearch() {
+      const kw = qInput.value.trim().toLowerCase();
+      // 一旦全削除→ローカルフィルタで再描画
+      listEl.innerHTML = "";
+      const filtered = currentDocs.filter(ds => {
+        const d = ds.data();
+        return !kw || containsCI(d.title, kw) || containsCI(d.message, kw) || containsCI(d.destination, kw);
+      });
+      if (filtered.length === 0) emptyEl.classList.remove("hidden"); else emptyEl.classList.add("hidden");
+      renderDocs(filtered);
+    }
+
+    function openEditModal(docSnap) {
+      const d = docSnap.data();
+      editId.value      = docSnap.id;
+      editTitle.value   = d.title || "";
+      editDest.value    = d.destination || "";
+      editDate.value    = d.date || "";                 // "YYYY-MM-DD" 形式を想定
+      editMood.value    = d.mood || "";
+      editWeather.value = d.weather || "";
+      editTags.value    = Array.isArray(d.tags) ? d.tags.join(", ") : "";
+      editMessage.value = d.message || "";
+      editNotice.textContent = "";
+
+      editModal.classList.remove("hidden");
+      editModal.classList.add("flex");
+    }
+
+    // 閉じる
+    function closeEditModal() {
+      editModal.classList.add("hidden");
+      editModal.classList.remove("flex");
+    }
+    // クリックで閉じる
+    editClose.addEventListener("click", closeEditModal);
+    editCancel.addEventListener("click", closeEditModal);
+    editModal.addEventListener("click", (e) => { if (e.target === editModal) closeEditModal(); });
+
+    // 保存
+    editForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!user) {
+        editNotice.textContent = "ログインが必要です。";
+        return;
+      }
+      const docId = editId.value;
+      if (!docId) return;
+
+      // 入力値を整形
+      const tags = editTags.value
+        .split(",")
+        .map(s => s.trim())
+        .filter(Boolean);
+      const uniqueTags = [...new Set(tags)]; // 重複除去
+
+      const payload = {
+        title:       editTitle.value.trim(),
+        destination: editDest.value.trim(),
+        date:        editDate.value.trim(),     // 必要なら YYYY-MM-DD のバリデーションを追加
+        mood:        editMood.value.trim(),
+        weather:     editWeather.value.trim(),
+        tags:        uniqueTags,
+        message:     editMessage.value,
+        updatedAt:   serverTimestamp(),
+      };
+
+      try {
+        await updateDoc(doc(db, "memories", docId), payload);
+        closeEditModal();
+        // 反映のため一覧再読込（簡単で確実）
+        await loadFirst();
+      } catch (err) {
+        console.error("[edit] update failed:", err);
+        editNotice.textContent = "保存に失敗しました。ネットワーク/権限をご確認ください。";
+      }
+    });
+
+
+    async function loadFirst() {
+      if (!user) return;
+      clearList();
+      setNotice("読み込み中…");
+
+      try {
+        const col = collection(db, "memories");
+        let qBase;
+        if (selectedTag) {
+          // タグ絞り込み（orderByを併用すると索引が必要になることがあります）
+          qBase = query(col,
+            where("ownerUid","==", user.uid),
+            where("tags","array-contains", selectedTag),
+            orderBy("createdAt","desc"),
+            limit(pageSize)
+          );
+        } else {
+          qBase = query(col,
+            where("ownerUid","==", user.uid),
+            orderBy("createdAt","desc"),
+            limit(pageSize)
+          );
+        }
+
+        const snap = await getDocs(qBase);
+        currentDocs = snap.docs;
+        if (snap.empty) {
+          emptyEl.classList.remove("hidden");
+        } else {
+          renderDocs(snap.docs);
+          cursor = snap.docs.at(-1) || null;
+          if (cursor) moreBtn.classList.remove("hidden");
+        }
+        rebuildTagOptions();
+        applyLocalSearch();
+      } catch (e) {
+        console.error(e);
+        setNotice("読み込みに失敗しました。必要なら Firestore の索引作成リンク（console内）を有効にしてください。");
+      } finally {
+        setNotice("");
+      }
+    }
+
+    async function loadMore() {
+      if (!cursor || !user) return;
+      setNotice("読み込み中…");
+      try {
+        const col = collection(db, "memories");
+        let qBase;
+        if (selectedTag) {
+          qBase = query(
+            col,
+            where("ownerUid","==", user.uid),
+            where("tags","array-contains", selectedTag),
+            orderBy("createdAt","desc"),
+            startAfter(cursor),
+            limit(pageSize)
+          );
+        } else {
+          qBase = query(
+            col,
+            where("ownerUid","==", user.uid),
+            orderBy("createdAt","desc"),
+            startAfter(cursor),
+            limit(pageSize)
+          );
+        }
+        const snap = await getDocs(qBase);
+        if (!snap.empty) {
+          currentDocs = currentDocs.concat(snap.docs);
+          renderDocs(snap.docs);
+          cursor = snap.docs.at(-1) || null;
+          if (!cursor) moreBtn.classList.add("hidden");
+          rebuildTagOptions();
+          applyLocalSearch();
+        } else {
+          moreBtn.classList.add("hidden");
+        }
+      } catch (e) {
+        console.error(e);
+        setNotice("読み込みに失敗しました。");
+      } finally {
+        setNotice("");
+      }
+    }
+
+    // events
+    loginBtn.addEventListener("click", async () => {
+      try { await signInWithPopup(auth, new GoogleAuthProvider()); }
+      catch (e) {
+        console.error(e);
+        alert("ログインに失敗しました。ポップアップがブロックされていないか確認してください。");
+      }
+    });
+    logoutBtn.addEventListener("click", async ()=> { await signOut(auth);
+    location.replace (`/login.html`); });
+    createBtn.addEventListener("click", () => {
+      if (!user) {
+        alert("ログインが必要です。右上からログインしてください。");
+        return;
+      }
+      location.replace("/index.html");
+    });
+    moreBtn.addEventListener("click", loadMore);
+    applyBtn.addEventListener("click", ()=> { selectedTag = tagSel.value || ""; loadFirst(); });
+    clearBtn.addEventListener("click", ()=> {
+      qInput.value = ""; tagSel.value = ""; selectedTag = ""; loadFirst();
+    });
+    qInput.addEventListener("input", ()=> applyLocalSearch());
+
+    onAuthStateChanged(auth, (u) => {
+      setAuthUI(u);
+      if (u) loadFirst();
+      else { clearList(); setNotice("ログインしてください。"); }
+    });
+  </script>
+</body>
+</html>

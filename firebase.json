@@ -1,10 +1,14 @@
 {
   "hosting": {
     "public": "public",
+    "site": "toyama-sticker-project",
     "ignore": [
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
+    ],
+    "headers": [
+      { "source": "/sw.js", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }
     ]
   },
   "functions": {

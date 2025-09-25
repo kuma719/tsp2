@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TSP 利用規約同意フロー</title>
+  <!-- TailwindCSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <meta name="color-scheme" content="light dark">
+  <style>
+    .scrollbox { -webkit-overflow-scrolling: touch; }
+  </style>
+</head>
+<body class="min-h-screen bg-gray-50 text-gray-800">
+  <main class="mx-auto max-w-3xl p-6">
+    <header class="mb-6 flex items-center justify-between">
+      <h1 class="text-2xl font-bold">Toyama Sticker Project</h1>
+      <span class="text-sm text-gray-500">アルバムステッカー Webアプリ</span>
+    </header>
+
+    <!-- 同意カード -->
+    <section id="gateCard" class="rounded-2xl bg-white shadow-sm ring-1 ring-gray-100">
+      <div class="p-6 md:p-8">
+        <h2 class="mb-2 text-xl font-semibold">ログイン前の確認</h2>
+        <p class="mb-4 text-sm text-gray-600">本サービスをご利用いただくには、<span class="font-medium">利用規約</span>と<span class="font-medium">プライバシーポリシー</span>を<strong>最後まで読み、同意</strong>していただく必要があります。</p>
+
+        <!-- スクロール進捗 -->
+        <div class="mb-3">
+          <div class="h-2 w-full overflow-hidden rounded-full bg-gray-200">
+            <div id="readProgress" class="h-2 w-0 rounded-full bg-blue-500 transition-all"></div>
+          </div>
+          <p id="readHint" class="mt-1 text-xs text-gray-500">規約を最後までスクロールしてください（0%）</p>
+        </div>
+
+        <!-- 利用規約ボックス -->
+        <div id="termsBox" class="scrollbox mb-4 h-64 w-full overflow-y-auto rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm leading-6">
+          <h3 class="mb-2 text-base font-semibold">【利用規約】</h3>
+          <p class="mb-2"><strong>第1条（目的）</strong> 本規約はToyama Sticker Project（以下「当団体」）が提供するサービスの利用条件を定めます。</p>
+          <p class="mb-2"><strong>第2条（アカウント利用条件）</strong> 本サービスは原則として13歳以上の方が利用できます。13歳未満の方は、保護者の同意を得た場合にのみ利用できます。利用者は正確な情報を提供しなければなりません。</p>
+          <p class="mb-2"><strong>第3条（禁止事項）</strong> 利用者は以下の行為を行ってはなりません：<br>・法令違反、公序良俗違反<br>・第三者の権利侵害（著作権、商標権、肖像権、プライバシー権等）<br>・サーバーへの過度な負荷をかける行為<br>・スパム、嫌がらせ、詐欺的行為<br>・ヌード、ポルノ、性的表現、暴力的・差別的・不快なコンテンツの投稿<br>・その他当団体が不適切と判断する行為</p>
+          <p class="mb-2"><strong>第4条（利用者の責任）</strong> 利用者は自己の責任において本サービスを利用するものとし、利用者が投稿・行為によって第三者に損害を与えた場合は自己の責任と費用で解決するものとします。</p>
+          <p class="mb-2"><strong>第5条（コンテンツ権利）</strong> 利用者はアップロードコンテンツの著作権を保持しますが、当団体に対し、当該コンテンツを全世界的かつ非独占的、無償で利用（複製、編集、翻案、翻訳、公衆送信、頒布、二次利用、広告・マーケティング素材への使用を含む）する権利を許諾します。利用者は著作者人格権を行使しないものとします。</p>
+          <p class="mb-2"><strong>第6条（不適切コンテンツへの対応）</strong> 当団体は、利用者が投稿したコンテンツが本規約に違反すると判断した場合、事前通知なく削除・非表示・アカウント停止等の措置を取ることができます。</p>
+          <p class="mb-2"><strong>第7条（サービスの停止・終了）</strong> 当団体は事前通知なくサービスを停止・変更・終了することがあります。</p>
+          <p class="mb-2"><strong>第8条（利用停止・退会）</strong> 利用者が本規約に違反した場合、当団体は利用停止または退会処理を行うことができます。退会後も当団体が保存するデータに関する権利義務は存続します。</p>
+          <p class="mb-2"><strong>第9条（規約の改定）</strong> 当団体は必要に応じて本規約を改定でき、改定後に利用した場合、利用者は同意したものとみなします。</p>
+          <p class="mb-2"><strong>第10条（準拠法・裁判管轄）</strong> 本規約は日本法を準拠法とし、本サービスに関連して生じる紛争は日本国内の裁判所を専属的合意管轄とします。</p>
+
+          <h3 class="mb-2 mt-4 text-base font-semibold">【プライバシーポリシー】</h3>
+          <p class="mb-2"><strong>第1条（基本方針）</strong> 当団体は個人情報保護法を遵守します。</p>
+          <p class="mb-2"><strong>第2条（取得情報）</strong> 利用者がアップロードする画像・動画・テキスト、アクセスログ、端末情報、Cookie等。</p>
+          <p class="mb-2"><strong>第3条（利用目的）</strong> 保存・閲覧機能の提供、運営改善、問い合わせ対応、広報活動（同意を得た場合）、不正防止、法令遵守。</p>
+          <p class="mb-2"><strong>第4条（第三者提供・委託）</strong> 本人同意や法令に基づく場合を除き第三者提供は行いません。業務委託先に個人情報を取り扱わせる場合は適切な監督を行います。</p>
+          <p class="mb-2"><strong>第5条（安全管理措置）</strong> Firebase等を利用し合理的な安全管理措置を行いますが絶対の保証はしません。また、データは国外のサーバーに保存される可能性があります。</p>
+          <p class="mb-2"><strong>第6条（保存期間）</strong> 利用目的達成後または一定期間経過後、データを削除する場合があります。</p>
+          <p class="mb-2"><strong>第7条（未成年者の個人情報）</strong> 未成年者の個人情報は、保護者の同意を得た場合にのみ収集・利用します。</p>
+          <p class="mb-2"><strong>第8条（利用者の権利）</strong> 利用者は自身の個人情報について、開示・訂正・削除を求めることができます。</p>
+          <p class="mb-2"><strong>第9条（Cookie等の利用）</strong> 当団体は利用状況の分析や利便性向上のためにCookieや類似技術を使用する場合があります。また、Google Analytics等の第三者解析ツールを利用してアクセス状況を把握し、将来的に広告配信を行う場合があります。その際、取得データは匿名化され、個人を特定するものではありません。</p>
+          <p class="mb-2"><strong>第10条（苦情・相談窓口）</strong> 利用者は個人情報の取扱いに関して苦情や相談を申し立てることができ、当団体は誠実に対応します。</p>
+          <p class="mb-2"><strong>第11条（改定）</strong> 本ポリシーは必要に応じて改定されます。改定後の利用で同意したものとみなします。</p>
+          <p class="mb-2"><strong>第12条（問い合わせ窓口）</strong> 個人情報の取扱いに関するお問い合わせはTSP運営事務局（tsp.stickerproject108ma@gmail.com）までご連絡ください。</p>
+
+          <p class="mt-4 text-gray-500">※ここにフルテキストを差し替えてください。</p>
+        </div>
+
+        <!-- 同意チェック -->
+        <div class="mb-4 space-y-3">
+          <label class="flex items-start gap-3 text-sm">
+            <input id="agreeCheckbox" type="checkbox" disabled class="mt-1 h-4 w-4 rounded border-gray-300 disabled:opacity-40" />
+            <span>内容に<strong>同意します</strong></span>
+          </label>
+        </div>
+
+        <!-- ボタン -->
+        <div class="flex items-center gap-3">
+          <button id="continueBtn" disabled class="inline-flex items-center justify-center rounded-xl bg-gray-300 px-4 py-2 text-sm font-semibold text-white opacity-60 transition disabled:cursor-not-allowed">
+            同意してログインへ進む
+          </button>
+          <button id="downloadBtn" class="text-xs text-gray-600 underline">規約をPDFで保存</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ログインカード -->
+    <section id="loginCard" class="mt-6 hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-100">
+      <div class="p-6 md:p-8">
+        <h2 class="mb-2 text-xl font-semibold">ログイン</h2>
+        <form id="loginForm" class="space-y-4">
+          <div>
+            <label for="email" class="mb-1 block text-sm font-medium">メールアドレス</label>
+            <input id="email" type="email" required class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none ring-blue-200 focus:ring" placeholder="you@example.com" />
+          </div>
+          <div>
+            <label for="password" class="mb-1 block text-sm font-medium">パスワード</label>
+            <input id="password" type="password" required minlength="8" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none ring-blue-200 focus:ring" placeholder="8文字以上" />
+          </div>
+          <button class="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">ログイン</button>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const box = document.getElementById('termsBox');
+    const agreeCheckbox = document.getElementById('agreeCheckbox');
+    const continueBtn = document.getElementById('continueBtn');
+    const progress = document.getElementById('readProgress');
+    const readHint = document.getElementById('readHint');
+    const gateCard = document.getElementById('gateCard');
+    const loginCard = document.getElementById('loginCard');
+    const downloadBtn = document.getElementById('downloadBtn');
+
+    let scrolledToBottom = false;
+
+    function updateProgress() {
+      const { scrollTop, scrollHeight, clientHeight } = box;
+      const ratio = Math.min(1, (scrollTop + clientHeight) / scrollHeight);
+      const pct = Math.round(ratio * 100);
+      progress.style.width = pct + '%';
+      readHint.textContent = `規約を最後までスクロールしてください（${pct}%）`;
+      if (ratio >= 0.999) {
+        scrolledToBottom = true;
+        agreeCheckbox.disabled = false;
+        readHint.textContent = '最下部まで到達しました（100%）';
+      }
+    }
+    box.addEventListener('scroll', updateProgress, { passive: true });
+    updateProgress();
+
+    agreeCheckbox.addEventListener('change', () => {
+      continueBtn.disabled = !(agreeCheckbox.checked && scrolledToBottom);
+    });
+
+    continueBtn.addEventListener('click', () => {
+      if (!(agreeCheckbox.checked && scrolledToBottom)) return;
+      gateCard.classList.add('hidden');
+      loginCard.classList.remove('hidden');
+    });
+
+    downloadBtn.addEventListener('click', () => {
+      window.print();
+    });
+  </script>
+</body>
+</html>

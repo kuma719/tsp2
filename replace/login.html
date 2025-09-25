@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ログイン | TSP Memories</title>
+
+  <!-- Tailwind (CDN; dev-friendly) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Firebase SDKs (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+  <!-- ▼▼▼ あなたの Firebase 設定をこのブロックに入れてください ▼▼▼
+  <script>
+    const firebaseConfig = { /* your config */ };
+    firebase.initializeApp(firebaseConfig);
+  </script>
+  ▲▲▲ ここまでコピー（index.htmlの設定と同じ） ▲▲▲ -->
+
+    <script>
+      const firebaseConfig = {
+      apiKey: "AIzaSyCu3Y-5Cxf4OEdww3q_hcT-nydrW1-o3mc",
+      authDomain: "toyama-sticker-project.firebaseapp.com",
+      projectId: "toyama-sticker-project",
+      storageBucket: "toyama-sticker-project.firebasestorage.app",
+      messagingSenderId: "491041450999",
+      appId: "1:491041450999:web:05744e00152305b3d15cf2"
+      };
+
+  const app = firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+  const auth = firebase.auth();
+  </script>
+</head>
+<body class="min-h-screen bg-gradient-to-b from-amber-50 to-sky-50 flex items-center justify-center p-6">
+  <div class="max-w-md w-full bg-white/80 backdrop-blur rounded-2xl shadow-lg border border-white/70 p-6">
+    <h1 class="text-2xl font-bold mb-2">TSP Memories</h1>
+    <p class="text-sm text-black/60 mb-6">Google アカウントでログインしてください。</p>
+
+    <button id="googleBtn" class="w-full flex items-center justify-center gap-3 py-2.5 rounded-xl border border-black/10 hover:bg-black/5 transition">
+      <img alt="" src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-5 h-5" />
+      <span class="font-medium">Googleでログイン</span>
+    </button>
+
+    <p id="status" class="text-xs text-black/60 mt-4"></p>
+  </div>
+
+  <script>
+    // リダイレクト先（ログイン成功時）
+    const NEXT_URL = "/";
+    const provider = new firebase.auth.GoogleAuthProvider();
+    firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+
+    // 既にログインしている場合は即リダイレクト
+    firebase.auth().onAuthStateChanged((user) => {
+      if (user) {
+        window.location.replace(NEXT_URL);
+      }
+    });
+
+    document.getElementById("googleBtn").addEventListener("click", async () => {
+      const status = document.getElementById("status");
+      status.textContent = "ポップアップを開いています…";
+      try {
+        await firebase.auth().signInWithPopup(provider);
+        status.textContent = "ログイン成功。移動します…";
+        window.location.replace(NEXT_URL);
+      } catch (e) {
+        console.error(e);
+        status.textContent = "ログインに失敗しました。もう一度お試しください。";
+        alert("Googleログインに失敗しました。ポップアップブロックを解除して再試行してください。");
+      }
+    });
+  </script>
+</body>
+</html>

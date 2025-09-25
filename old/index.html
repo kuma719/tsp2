@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TSP Memories </title>
+
+  
+
+  <!-- Tailwind (dev CDN). For production, replace with a built CSS. -->
+  <script type="module" src="./firebase-init.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module" src="./app-guard.js"></script>
+  <script type="module" src="./firebase-bridge.js"></script>
+  <!-- UMD は defer を付ける -->
+  <script defer crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script defer crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script defer src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script defer src="https://unpkg.com/lucide@latest"></script>
+
+
+
+  <!-- Babel用の JSX は text/babel のままでOK（BabelがDOM読み込み後に処理） -->
+  <script defer type="text/babel" data-presets="env,react" src="./script-app.jsx"></script>
+
+
+
+  <!-- App styles -->
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body class="min-h-screen">
+  <div id="root"></div>
+
+  <!-- Firebase v9 modules: init + guard + bridge -->
+  
+
+</body>
+</html>
