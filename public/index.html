@@ -11,8 +11,42 @@
     .fade-in { animation: fade 0.3s ease-in; }
     @keyframes fade { from {opacity:0} to {opacity:1} }
   </style>
+   <style>
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+    }
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 20px rgba(14, 165, 233, 0.3); }
+      50% { box-shadow: 0 0 40px rgba(14, 165, 233, 0.6); }
+    }
+    @keyframes gradient-shift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    .float-anim { animation: float 3s ease-in-out infinite; }
+    .pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+    .gradient-bg {
+      background: linear-gradient(-45deg, #0ea5e9, #06b6d4, #8b5cf6, #ec4899);
+      background-size: 400% 400%;
+      animation: gradient-shift 15s ease infinite;
+    }
+    .glass {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .card-hover {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .card-hover:hover {
+      transform: translateY(-5px) scale(1.02);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    }
+  </style>
 </head>
-<body class="bg-slate-50 text-slate-800">
+<!-- <body class="bg-slate-50 text-slate-800">
   <div class="max-w-3xl mx-auto p-4 sm:p-6">
     <header class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
       <h1 class="text-2xl font-bold">TSP QRアルバム <span class="text-sm font-medium text-slate-500">（ローカル保存 / ログイン不要）</span></h1>
@@ -68,6 +102,10 @@
           共有リンクを作成（1時間有効）
         </button>
        <span id="shareLinkMsg" class="text-xs text-slate-500"></span>
+       <p class="mt-2 text-xs text-slate-500">
+        ※ 共有リンクを作成すると、この端末のアルバムデータ（.tsp形式）が
+        サーバーに<strong>一時保存</strong>されます（<strong>有効期限1時間</strong>、期限後は自動的に無効化／削除対象）。
+        </p>
         <p class="mt-2 text-xs text-slate-500">※ 機種変更時は「書き出し」→新端末で本ページを開き「読み込み」。</p>
       </div>
     </section>
@@ -75,8 +113,148 @@
     <footer class="mt-6 text-center text-xs text-slate-500">
       © TSP / ローカル保存デモ。ログインなし・サーバー不要。
     </footer>
-  </div>
+  </div> -->
+<body class="bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 min-h-screen">
+  <div class="max-w-4xl mx-auto p-4 sm:p-8 py-8">
+    <!-- Header -->
+    <header class="mb-8">
+      <div class="bg-white/80 backdrop-blur-sm rounded-3xl shadow-lg p-6 border border-white/20">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 class="text-3xl font-bold bg-gradient-to-r from-sky-600 to-blue-600 bg-clip-text text-transparent">
+              <i class="fas fa-camera-retro mr-2"></i>TSP QRアルバム
+            </h1>
+            <p class="text-sm text-slate-500 mt-1">ローカル保存 / ログイン不要</p>
+          </div>
+          <div class="flex items-center gap-3 bg-gradient-to-r from-emerald-50 to-green-50 px-4 py-2 rounded-full border border-emerald-200">
+            <span id="statusDot" class="inline-block w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span id="statusText" class="text-sm font-medium text-emerald-700">保存済み</span>
+          </div>
+        </div>
+      </div>
+    </header>
 
+    <!-- Info Banner -->
+    <section class="mb-6">
+      <div class="rounded-2xl bg-gradient-to-r from-sky-500 to-blue-600 shadow-xl p-6 text-white">
+        <div class="flex flex-wrap items-center gap-2 mb-3">
+          <span class="px-3 py-1 rounded-full text-xs bg-white/20 backdrop-blur-sm border border-white/30">
+            <i class="fas fa-qrcode mr-1"></i>統一URL
+          </span>
+          <span id="browserTag" class="px-3 py-1 rounded-full text-xs bg-white/20 backdrop-blur-sm border border-white/30">
+            <i class="fas fa-globe mr-1"></i>ブラウザ
+          </span>
+          <span id="pwaTag" class="hidden px-3 py-1 rounded-full text-xs bg-emerald-500/30 backdrop-blur-sm border border-emerald-400/50">
+            <i class="fas fa-mobile-alt mr-1"></i>PWA
+          </span>
+        </div>
+        <p class="text-sm leading-relaxed">
+          <i class="fas fa-shield-alt mr-2"></i>このアルバムは<strong>この端末・このブラウザ</strong>にのみ保存されます。サーバーには送信しません。<br>
+          <span class="text-white/80 text-xs mt-1 inline-block">機種変更時は「バックアップ書き出し」→新端末で「読み込み」で移行できます。</span>
+        </p>
+      </div>
+    </section>
+
+    <div class="grid gap-6">
+      <!-- Title and Notes -->
+      <div class="rounded-3xl bg-white/90 backdrop-blur-sm shadow-xl p-6 sm:p-8 border border-white/20 hover:shadow-2xl transition-all duration-300">
+        <h2 class="text-xl font-bold mb-4 flex items-center text-slate-800">
+          <i class="fas fa-pen-fancy mr-3 text-sky-600"></i>タイトル / メモ
+        </h2>
+        <input 
+          id="title" 
+          type="text" 
+          placeholder="アルバムのタイトルを入力..." 
+          class="w-full mb-4 px-4 py-3 rounded-xl border-2 border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all duration-200 bg-white/50"
+        />
+        <textarea 
+          id="notes" 
+          rows="5" 
+          placeholder="旅のメモ、気づき、キャプション…" 
+          class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all duration-200 resize-none bg-white/50"
+        ></textarea>
+      </div>
+
+      <!-- Media Upload -->
+      <div class="rounded-3xl bg-white/90 backdrop-blur-sm shadow-xl p-6 sm:p-8 border border-white/20 hover:shadow-2xl transition-all duration-300">
+        <div class="flex items-center justify-between mb-5">
+          <h2 class="text-xl font-bold flex items-center text-slate-800">
+            <i class="fas fa-images mr-3 text-purple-600"></i>写真 / 動画
+          </h2>
+          <label class="inline-flex items-center gap-2 cursor-pointer bg-gradient-to-r from-purple-50 to-pink-50 px-4 py-2 rounded-full hover:from-purple-100 hover:to-pink-100 transition-all duration-200">
+            <input id="compressToggle" type="checkbox" checked class="rounded border-slate-300 text-purple-600 focus:ring-purple-500"> 
+            <span class="text-sm font-medium text-purple-700">
+              <i class="fas fa-compress-alt mr-1"></i>軽量化
+            </span>
+          </label>
+        </div>
+        
+        <div class="mb-5">
+          <label class="flex items-center justify-center w-full px-6 py-8 border-3 border-dashed border-sky-300 rounded-2xl cursor-pointer bg-gradient-to-br from-sky-50 to-blue-50 hover:from-sky-100 hover:to-blue-100 transition-all duration-300 group">
+            <div class="text-center">
+              <i class="fas fa-cloud-upload-alt text-4xl text-sky-500 mb-3 group-hover:scale-110 transition-transform duration-200"></i>
+              <p class="text-sm font-medium text-slate-700">ファイルを選択またはドラッグ&ドロップ</p>
+              <p class="text-xs text-slate-500 mt-1">画像/動画対応 - 自動圧縮・縮小</p>
+            </div>
+            <input id="fileInput" type="file" accept="image/*,video/*" multiple class="hidden" />
+          </label>
+        </div>
+        
+        <div id="gallery" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4"></div>
+      </div>
+
+      <!-- Backup and Restore -->
+      <div class="rounded-3xl bg-white/90 backdrop-blur-sm shadow-xl p-6 sm:p-8 border border-white/20 hover:shadow-2xl transition-all duration-300">
+        <h2 class="text-xl font-bold mb-5 flex items-center text-slate-800">
+          <i class="fas fa-database mr-3 text-emerald-600"></i>バックアップ / 復元
+        </h2>
+        
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-5">
+          <button id="exportBtn" class="group px-5 py-3 rounded-xl bg-gradient-to-r from-sky-600 to-blue-600 text-white hover:from-sky-700 hover:to-blue-700 shadow-lg hover:shadow-xl transition-all duration-200 font-medium">
+            <i class="fas fa-download mr-2 group-hover:animate-bounce"></i>書き出し
+          </button>
+          
+          <label class="group px-5 py-3 rounded-xl bg-gradient-to-r from-slate-700 to-slate-900 text-white hover:from-slate-800 hover:to-black shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer font-medium text-center">
+            <i class="fas fa-upload mr-2 group-hover:animate-bounce"></i>読み込み
+            <input id="importInput" type="file" accept="application/json,.tsp" class="hidden" />
+          </label>
+          
+          <button id="clearBtn" class="group px-5 py-3 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 text-white hover:from-rose-700 hover:to-red-700 shadow-lg hover:shadow-xl transition-all duration-200 font-medium">
+            <i class="fas fa-trash-alt mr-2 group-hover:animate-bounce"></i>削除
+          </button>
+        </div>
+
+        <div class="bg-gradient-to-r from-emerald-50 to-green-50 rounded-2xl p-4 border border-emerald-200">
+          <button id="shareLinkBtn" class="w-full group px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 text-white hover:from-emerald-700 hover:to-green-700 shadow-lg hover:shadow-xl transition-all duration-200 font-medium mb-2">
+            <i class="fas fa-share-alt mr-2 group-hover:animate-bounce"></i>共有リンクを作成（1時間有効）
+          </button>
+          <p id="shareLinkMsg" class="text-xs text-emerald-700 text-center font-medium"></p>
+          
+          <div class="mt-3 pt-3 border-t border-emerald-200">
+            <p class="text-xs text-slate-600 leading-relaxed">
+              <i class="fas fa-info-circle mr-1 text-emerald-600"></i>
+              共有リンクを作成すると、アルバムデータ（.tsp形式）がサーバーに<strong>一時保存</strong>されます（<strong>有効期限1時間</strong>、期限後は自動削除）。
+            </p>
+          </div>
+        </div>
+
+        <p class="mt-4 text-xs text-slate-500 bg-slate-50 rounded-lg p-3">
+          <i class="fas fa-lightbulb mr-1 text-amber-500"></i>
+          機種変更時は「書き出し」→新端末で本ページを開き「読み込み」してください。
+        </p>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="mt-10 text-center">
+      <div class="inline-block bg-white/80 backdrop-blur-sm rounded-full px-6 py-3 shadow-lg">
+        <p class="text-xs text-slate-600">
+          <i class="fas fa-heart text-rose-500 mr-1"></i>
+          © TSP / ローカル保存デモ。ログインなし・サーバー不要。
+        </p>
+      </div>
+    </footer>
+  </div>
   <script type="module">
   // --- Firebase SDK（モジュラー）を読み込み ---
   import { app, auth, authReady } from "./firebase-init.js";
@@ -212,8 +390,60 @@
   }
 
   // ボタン紐付け & 自動受信
-  document.getElementById('shareLinkBtn')?.addEventListener('click', createShareLink);
+    
+    document.getElementById('shareLinkBtn')?.addEventListener('click', async () => {
+    const ok = confirm(
+        '共有リンクを作成するには、この端末のアルバムデータを' +
+        '一時的にサーバーへ保存します（有効期限1時間）。よろしいですか？'
+    );
+    if (!ok) return;
+    await createShareLink();
+    });
   tryImportFromShareLink();
+
+      // ボタンのインタラクション
+    const buttons = document.querySelectorAll('.card-hover');
+    
+    buttons.forEach(btn => {
+      btn.addEventListener('click', function() {
+        this.style.transform = 'scale(0.95)';
+        setTimeout(() => {
+          this.style.transform = '';
+        }, 100);
+      });
+    });
+
+    // 共有リンクボタンのサンプル動作
+    document.getElementById('shareLinkBtn').addEventListener('click', () => {
+      const msg = document.getElementById('shareLinkMsg');
+      msg.textContent = '✓ 共有リンクを作成しました（1時間有効）';
+      msg.classList.add('text-emerald-300');
+      setTimeout(() => {
+        msg.textContent = '';
+      }, 3000);
+    });
+
+    // バックアップボタンのサンプル動作
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      const msg = document.getElementById('shareLinkMsg');
+      msg.textContent = '✓ バックアップファイルをダウンロードしました';
+      msg.classList.add('text-sky-300');
+      setTimeout(() => {
+        msg.textContent = '';
+      }, 3000);
+    });
+
+    // 削除ボタンのサンプル動作
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      if(confirm('本当にこの端末からデータを削除しますか？')) {
+        const msg = document.getElementById('shareLinkMsg');
+        msg.textContent = '✓ データを削除しました';
+        msg.classList.add('text-rose-300');
+        setTimeout(() => {
+          msg.textContent = '';
+        }, 3000);
+      }
+    });
 </script>
 
 
