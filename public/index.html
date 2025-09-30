@@ -64,6 +64,10 @@
           </label>
           <button id="clearBtn" class="px-4 py-2 rounded-2xl bg-rose-600 text-white hover:bg-rose-700">この端末から削除</button>
         </div>
+        <button id="shareLinkBtn" class="px-4 py-2 rounded-2xl bg-emerald-600 text-white hover:bg-emerald-700">
+          共有リンクを作成（1時間有効）
+        </button>
+       <span id="shareLinkMsg" class="text-xs text-slate-500"></span>
         <p class="mt-2 text-xs text-slate-500">※ 機種変更時は「書き出し」→新端末で本ページを開き「読み込み」。</p>
       </div>
     </section>
@@ -72,6 +76,147 @@
       © TSP / ローカル保存デモ。ログインなし・サーバー不要。
     </footer>
   </div>
+
+  <script type="module">
+  // --- Firebase SDK（モジュラー）を読み込み ---
+  import { app, auth, authReady } from "./firebase-init.js";
+  import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
+  import { getFirestore, doc, setDoc, getDoc, serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+  import { signInAnonymously } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js"; // ← getAuth は不要
+
+  // ★ 1) 認証完了を待つ
+  await authReady;
+
+  // ★ 2) 未ログインなら匿名ログイン（ここが通ってから初めて Storage を使う）
+  if (!auth.currentUser) {
+    try {
+      await signInAnonymously(auth);
+    } catch (e) {
+      console.error('Anonymous sign-in failed:', e);
+      alert('アップロード前の匿名ログインに失敗しました。接続状況またはAuth設定をご確認ください。');
+    }
+  }
+
+  // ★ 3) ここから Storage / Firestore を初期化して使う
+  // 2番目の引数に "gs://..." を渡すと、そのバケットに対する Storage インスタンスになります
+  const storage = getStorage(app, 'gs://toyama-sticker-project-asia');
+  const db = getFirestore(app);
+
+  // --- 既存ロジックを流用：.tsp（JSON）Blobを組み立て ---
+  async function buildTspBlob() {
+    const album = await loadAlbum();
+    const blobs = await allBlobs();
+    const files = [];
+    for (const b of blobs){
+      const array = await b.data.arrayBuffer();
+      files.push({ id: b.id, type: b.type, name: b.name, data: Array.from(new Uint8Array(array)) });
+    }
+    const payload = { version:1, exportedAt: Date.now(), album, files };
+    return new Blob([JSON.stringify(payload)], { type:'application/json' });
+  }
+
+  // --- 共有リンク作成：1時間有効（FirestoreにexpiresAt、Storageに実体） ---
+  async function createShareLink() {
+    showSaving();
+    const msgEl = document.getElementById('shareLinkMsg');
+    msgEl.textContent = 'アップロード中…';
+
+    try {
+      // 念のため：アップロード直前にもログイン確認（別タブでログアウトされた等の保険）
+      if (!auth.currentUser) {
+        await signInAnonymously(auth);
+      }
+
+      // 1) .tsp を生成
+      const tspBlob = await buildTspBlob();
+      const id = crypto.randomUUID();
+      const path = `shares/${id}.tsp`;           // Storage 側の保存パス
+
+      // 2) Storage にアップロード（Content-Type 付与）
+      const ref = storageRef(storage, path);
+      await uploadBytes(ref, tspBlob, { contentType: 'application/json' });
+
+      // 3) Firestore にメタデータ（TTL対象）を書き込み
+      const now = Date.now();
+      const expiresAt = Timestamp.fromMillis(now + 60 * 60 * 1000); // 1時間後
+      await setDoc(doc(db, 'shares', id), {
+        path, createdAt: serverTimestamp(), expiresAt
+      });
+
+      // 4) アプリ用の短い共有URL（docIdだけを渡す）
+      const shareUrl = `${location.origin}${location.pathname}?share=${encodeURIComponent(id)}`;
+
+      // 5) 共有シート or クリップボードへ
+      if (navigator.share) {
+        try {
+          await navigator.share({ title: 'TSP アルバム', url: shareUrl });
+          msgEl.textContent = '共有リンクを送信しました。';
+        } catch {
+          await navigator.clipboard?.writeText(shareUrl);
+          msgEl.textContent = '共有リンクをコピーしました。';
+          alert('共有リンクをコピーしました:\n' + shareUrl);
+        }
+      } else {
+        await navigator.clipboard?.writeText(shareUrl);
+        msgEl.textContent = '共有リンクをコピーしました。';
+        alert('共有リンクをコピーしました:\n' + shareUrl);
+      }
+    } catch (e) {
+      console.error(e);
+      msgEl.textContent = '共有リンク作成に失敗しました。';
+      alert('共有リンクの作成に失敗しました。');
+    } finally {
+      showSaved();
+    }
+  }
+
+  // --- 受け取り側：?share=<id> を検出し、未期限切れなら読み込む ---
+  async function tryImportFromShareLink() {
+    const id = new URLSearchParams(location.search).get('share');
+    if (!id) return;
+
+    showSaving();
+    try {
+      const snap = await getDoc(doc(db, 'shares', id));
+      if (!snap.exists()) {
+        alert('この共有リンクは無効です（ドキュメントが見つかりません）。');
+        return;
+      }
+      const data = snap.data();
+      const { path, expiresAt } = data || {};
+      if (!path || !expiresAt) {
+        alert('共有データが不完全です。');
+        return;
+      }
+      const now = Timestamp.now();
+      if (now.toMillis() > expiresAt.toMillis()) {
+        alert('共有リンクの有効期限が切れています（1時間）。');
+        return;
+      }
+
+      // 期限内：Storage から .tsp を取得して import
+      const url = await getDownloadURL(storageRef(storage, path));
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const file = new File([blob], 'shared.tsp', { type: 'application/json' });
+      await importTSP(file);
+      alert('共有アルバムを読み込みました。この端末に保存しました。');
+
+      history.replaceState(null, '', location.pathname); // クエリ消去
+    } catch (e) {
+      console.error(e);
+      alert('共有データの取得に失敗しました。');
+    } finally {
+      showSaved();
+    }
+  }
+
+  // ボタン紐付け & 自動受信
+  document.getElementById('shareLinkBtn')?.addEventListener('click', createShareLink);
+  tryImportFromShareLink();
+</script>
+
+
 
   <script>
     // ---------- 小さなユーティリティ ----------
@@ -158,7 +303,6 @@
     // ---------- IndexedDB ラッパー ----------
     const DB_NAME = 'tsp_album_db';
     const DB_VERSION = 1;
-    let db;
     function openDB(){
       return new Promise((resolve, reject)=>{
         const req = indexedDB.open(DB_NAME, DB_VERSION);

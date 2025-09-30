@@ -13,6 +13,8 @@ const corsLib = require("cors");
 const { getStorage,FieldValue } = require("firebase-admin/storage");
 const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { getFirestore } = require("firebase-admin/firestore");
+const functions = require("firebase-functions/v2");
+const { onDocumentDeleted } = require("firebase-functions/v2/firestore");
 
 
 
@@ -504,3 +506,19 @@ exports.getSignedDownloadUrl = onRequest(
     });
   }
 );
+
+
+
+exports.cleanupShareFile = onDocumentDeleted("shares/{id}", async (event) => {
+  try {
+    const beforeSnap = event.data;                   // 削除前のスナップショット
+    const data = beforeSnap && beforeSnap.data();    // { path, createdAt, expiresAt } を想定
+    const path = data && data.path;
+    if (!path) return;
+
+    await admin.storage().bucket(RAW_BUCKET).file(path).delete({ ignoreNotFound: true });
+    console.log("Deleted storage file:", `${RAW_BUCKET}/${path}`);
+  } catch (e) {
+    console.error("Failed to delete storage file:", e);
+  }
+});
