@@ -10,8 +10,77 @@
   <style>
     .fade-in { animation: fade 0.3s ease-in; }
     @keyframes fade { from {opacity:0} to {opacity:1} }
-  </style>
-   <style>
+  
+    .post-card {
+        border-radius: 1rem;              /* rounded-2xl */
+        background: #fff;                 /* bg-white */
+        border: 1px solid #e2e8f0;        /* border-slate-200 */
+        box-shadow: 0 1px 2px rgba(0,0,0,.05); /* shadow */
+        overflow: hidden;
+    }
+    .post-header {
+        display: flex; align-items: center; gap: .75rem; /* flex items-center gap-3 */
+        padding: .75rem 1rem;                            /* px-4 py-3 */
+    }
+    .post-username {
+        font-size: .875rem; font-weight: 600; color: #0f172a; /* text-sm font-semibold text-slate-800 */
+    }
+    .post-media {
+        width: 100%;
+        position: relative;
+        background: #f1f5f9;             /* bg-slate-100 */
+        aspect-ratio: 1 / 1;              /* aspect-square（対応しない古いブラウザは objectFit で代替） */
+    }
+    .post-media > img,
+    .post-media > video {
+        position: absolute; inset: 0;
+        width: 100%; height: 100%;
+        object-fit: cover;                /* object-cover */
+    }
+    .post-actions {
+        display: flex; align-items: center; justify-content: space-between; /* flex items-center justify-between */
+        padding: .5rem 1rem;              /* px-4 py-2 */
+    }
+    .icon-btn {
+        padding: .5rem; margin: -.5rem; border-radius: 9999px; /* p-2 -m-2 rounded-full */
+        transition: background-color .2s ease;
+    }
+    .icon-btn:hover { background: #f1f5f9; } /* hover:bg-slate-100 */
+
+    .post-meta { padding: 0 1rem 0.75rem; font-size: .875rem; color: #334155; } /* px-4 pb-3 text-sm text-slate-700 */
+    .post-caption { margin-top: .25rem; color: #475569; font-size: .875rem; white-space: pre-wrap; } /* mt-1 ... */
+
+        /* 選択UI */
+    .media-wrap { position: relative; }
+    .select-overlay {
+        position: absolute; inset: 0;
+        background: rgba(0,0,0,.08);      /* 選択時のうっすら被せ */
+        opacity: 0; pointer-events: none;
+        transition: opacity .2s ease;
+    }
+    .media-wrap.is-selected .select-overlay { opacity: 1; }
+
+    .del-btn {
+        position: absolute; top: .5rem; left: .5rem;
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 2rem; height: 2rem; border-radius: 9999px;
+        background: rgba(255,255,255,.95); color: #0f172a; /* text-slate-900 */
+        border: 1px solid rgba(148,163,184,.5);           /* border-slate-400/50 */
+        box-shadow: 0 2px 10px rgba(0,0,0,.12);
+        opacity: 0; transform: scale(.9);
+        transition: opacity .15s ease, transform .15s ease, background .2s;
+    }
+    .del-btn:hover { background: #fee2e2; } /* hover:bg-rose-100 */
+    /* 表示条件：選択時 or ホバー時（PC） */
+    .media-wrap.is-selected .del-btn,
+    .media-wrap:hover .del-btn {
+        opacity: 1; transform: scale(1);
+    }
+
+    /* 選択時の枠 */
+    .media-wrap.is-selected { outline: 3px solid rgba(59,130,246,.5); /* ring-blue-500/50 */ outline-offset: 0; border-radius: .75rem; }
+
+
     @keyframes float {
       0%, 100% { transform: translateY(0px); }
       50% { transform: translateY(-10px); }
@@ -150,7 +219,7 @@
         </div>
         <p class="text-sm leading-relaxed">
           <i class="fas fa-shield-alt mr-2"></i>このアルバムは<strong>この端末・このブラウザ</strong>にのみ保存されます。サーバーには送信しません。<br>
-          <span class="text-white/80 text-xs mt-1 inline-block">機種変更時は「バックアップ書き出し」→新端末で「読み込み」で移行できます。</span>
+          <span class="text-white/80 text-xs mt-1 inline-block">機種変更時は「バックアップ保存」→新端末で「読み込み」で移行できます。</span>
         </p>
       </div>
     </section>
@@ -178,15 +247,14 @@
       <!-- Media Upload -->
       <div class="rounded-3xl bg-white/90 backdrop-blur-sm shadow-xl p-6 sm:p-8 border border-white/20 hover:shadow-2xl transition-all duration-300">
         <div class="flex items-center justify-between mb-5">
-          <h2 class="text-xl font-bold flex items-center text-slate-800">
+          <!-- <h2 class="text-xl font-bold flex items-center text-slate-800">
             <i class="fas fa-images mr-3 text-purple-600"></i>写真 / 動画
-          </h2>
+          </h2> -->
+         <h2 class="text-xl font-bold flex items-center text-slate-800">
+           <i class="fas fa-clone mr-3 text-purple-600"></i>写真 / 動画
+         </h2>
           <label class="inline-flex items-center gap-2 cursor-pointer bg-gradient-to-r from-purple-50 to-pink-50 px-4 py-2 rounded-full hover:from-purple-100 hover:to-pink-100 transition-all duration-200">
-            <input id="compressToggle" type="checkbox" checked class="rounded border-slate-300 text-purple-600 focus:ring-purple-500"> 
-            <span class="text-sm font-medium text-purple-700">
-              <i class="fas fa-compress-alt mr-1"></i>軽量化
-            </span>
-          </label>
+
         </div>
         
         <div class="mb-5">
@@ -194,7 +262,7 @@
             <div class="text-center">
               <i class="fas fa-cloud-upload-alt text-4xl text-sky-500 mb-3 group-hover:scale-110 transition-transform duration-200"></i>
               <p class="text-sm font-medium text-slate-700">ファイルを選択またはドラッグ&ドロップ</p>
-              <p class="text-xs text-slate-500 mt-1">画像/動画対応 - 自動圧縮・縮小</p>
+              <p class="text-xs text-slate-500 mt-1">画像/動画対応</p>
             </div>
             <input id="fileInput" type="file" accept="image/*,video/*" multiple class="hidden" />
           </label>
@@ -211,7 +279,7 @@
         
         <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-5">
           <button id="exportBtn" class="group px-5 py-3 rounded-xl bg-gradient-to-r from-sky-600 to-blue-600 text-white hover:from-sky-700 hover:to-blue-700 shadow-lg hover:shadow-xl transition-all duration-200 font-medium">
-            <i class="fas fa-download mr-2 group-hover:animate-bounce"></i>書き出し
+            <i class="fas fa-download mr-2 group-hover:animate-bounce"></i>保存
           </button>
           
           <label class="group px-5 py-3 rounded-xl bg-gradient-to-r from-slate-700 to-slate-900 text-white hover:from-slate-800 hover:to-black shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer font-medium text-center">
@@ -240,7 +308,7 @@
 
         <p class="mt-4 text-xs text-slate-500 bg-slate-50 rounded-lg p-3">
           <i class="fas fa-lightbulb mr-1 text-amber-500"></i>
-          機種変更時は「書き出し」→新端末で本ページを開き「読み込み」してください。
+          機種変更時は「保存」→新端末で本ページを開き「読み込み」してください。
         </p>
       </div>
     </div>
@@ -433,17 +501,7 @@
       }, 3000);
     });
 
-    // 削除ボタンのサンプル動作
-    document.getElementById('clearBtn').addEventListener('click', () => {
-      if(confirm('本当にこの端末からデータを削除しますか？')) {
-        const msg = document.getElementById('shareLinkMsg');
-        msg.textContent = '✓ データを削除しました';
-        msg.classList.add('text-rose-300');
-        setTimeout(() => {
-          msg.textContent = '';
-        }, 3000);
-      }
-    });
+
 </script>
 
 
@@ -572,41 +630,30 @@
       await put('album', next);
     }
 
-    // ---------- 画像/動画の取り扱い（軽量化） ----------
-    async function processFile(file, compress){
-      if (!compress) return file; // そのまま
-      if (file.type.startsWith('image/')) {
-        const img = await createImageBitmap(file);
-        const max = 2000; // 長辺上限
-        const scale = Math.min(1, max / Math.max(img.width, img.height));
-        const canvas = new OffscreenCanvas(Math.round(img.width*scale), Math.round(img.height*scale));
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const blob = await canvas.convertToBlob({ type:'image/jpeg', quality:0.85 });
-        return new File([blob], file.name.replace(/\.[^.]+$/,'.jpg'), {type:'image/jpeg'});
-      } else if (file.type.startsWith('video/')) {
-        // 簡易：動画は圧縮せずそのまま保存（UIで注意）。本格圧縮はffmpeg.wasmを採用してもOK
-        return file;
-      } else {
-        return file;
-      }
-    }
-
+    // ---------- 画像/動画の取り扱い（軽量化なし） ----------
     async function addFiles(files){
-      const compress = $('#compressToggle').checked;
-      for (const f of files){
-        const proc = await processFile(f, compress);
+    for (const f of files){
         const id = crypto.randomUUID();
-        const blob = proc;
-        await put('blobs', { id, type: blob.type, data: blob, name: proc.name, size: proc.size });
+        const blob = f; // 圧縮せずそのまま保存
+        await put('blobs', { id, type: blob.type, data: blob, name: f.name, size: f.size });
+
         const album = await loadAlbum();
-        album.items.push({ id, kind: blob.type.startsWith('image/') ? 'image' : (blob.type.startsWith('video/') ? 'video' : 'file'), name: proc.name, size: proc.size });
+        album.items.push({
+        id,
+        kind: blob.type.startsWith('image/') ? 'image'
+            : (blob.type.startsWith('video/') ? 'video' : 'file'),
+        name: f.name,
+        size: f.size
+        });
         album.updatedAt = Date.now();
         await put('album', album);
-      }
-      await renderGallery();
-      showSaved();
     }
+    await renderGallery();
+    showSaved();
+    }
+
+
+
 
     // ---------- 表示 ----------
     async function renderGallery(){
@@ -688,6 +735,8 @@
       showSaved();
     }
 
+    
+
     // ---------- 起動処理 ----------
     (async function init(){
       await openDB();
@@ -720,17 +769,302 @@
         e.target.value = '';
       });
 
-      $('#clearBtn').addEventListener('click', async ()=>{
-        if (!confirm('この端末からアルバムを削除します。よろしいですか？（バックアップはお済みですか？）')) return;
-        await del('album', ALBUM_KEY);
-        const all = await allBlobs();
-        for (const b of all){ await del('blobs', b.id); }
-        $('#title').value = '';
-        $('#notes').value = '';
+    // 全削除ボタン
+    document.getElementById('clearBtn').addEventListener('click', async () => {
+    const ok = confirm('この端末からアルバムを削除します。よろしいですか？（バックアップはお済みですか？）');
+    if (!ok) {
+        // キャンセル時の表示（任意）
+        const msg = document.getElementById('shareLinkMsg');
+        if (msg) {
+        msg.textContent = 'キャンセルしました';
+        msg.classList.remove('text-rose-300');
+        setTimeout(() => (msg.textContent = ''), 2000);
+        }
+        return; // ← ここで完全に終了
+    }
+
+    await del('album', ALBUM_KEY);
+    const all = await allBlobs();
+    for (const b of all) { await del('blobs', b.id); }
+    document.getElementById('title').value = '';
+    document.getElementById('notes').value = '';
+    await renderGallery();
+    showSaved();
+
+    const msg = document.getElementById('shareLinkMsg');
+    if (msg) {
+        msg.textContent = '✓ データを削除しました';
+        msg.classList.add('text-rose-300');
+        setTimeout(() => (msg.textContent = ''), 3000);
+    }
+    });
+
+    })();
+
+  async function toggleLike(itemId) {
+    const album = await loadAlbum();
+    const idx = album.items.findIndex(x => x.id === itemId);
+    if (idx === -1) return;
+    const it = album.items[idx];
+    it.likes = (it.likes || 0);
+    it.liked = !it.liked;
+    it.likes += it.liked ? 1 : Math.max(it.likes > 0 ? -1 : 0, 0); // マイナスにしない
+    album.updatedAt = Date.now();
+    await put('album', album);
+    await renderGallery(); // 再描画
+  }
+
+  // キャプション編集
+  async function editCaption(itemId) {
+    const album = await loadAlbum();
+    const idx = album.items.findIndex(x => x.id === itemId);
+    if (idx === -1) return;
+    const cur = album.items[idx].caption || '';
+    const next = prompt('キャプションを入力', cur);
+    if (next === null) return;
+    album.items[idx].caption = next;
+    album.updatedAt = Date.now();
+    await put('album', album);
+    await renderGallery();
+  }
+
+  // ---- インスタ風レンダリング ----
+  async function renderGallery(){
+    const wrap = document.getElementById('gallery');
+    wrap.className = 'grid grid-cols-1 sm:grid-cols-2 gap-5'; // 1列→2列
+    wrap.innerHTML = '';
+
+    const album = await loadAlbum();
+    // 新しい順に見せたい場合は下の行を有効化
+    // album.items = [...album.items].reverse();
+
+    for (const it of album.items){
+      const blobRow = await get('blobs', it.id);
+      if (!blobRow) continue;
+
+      const url = URL.createObjectURL(blobRow.data);
+
+      const card = document.createElement('article');
+      card.className = 'post-card';
+
+      // ヘッダー（仮のユーザー表示）
+      const header = document.createElement('div');
+      header.className = 'post-header';
+      header.innerHTML = `
+        <div class="w-8 h-8 rounded-full bg-slate-300"></div>
+        <div>
+          <div class="post-username">TSP ユーザー</div>
+          <div class="text-[11px] text-slate-500">${new Date(album.updatedAt || Date.now()).toLocaleString()}</div>
+        </div>
+        <button class="ml-auto icon-btn" title="削除" aria-label="削除">
+          <i class="fas fa-trash text-slate-600"></i>
+        </button>
+      `;
+
+      // メディア（正方形）
+      const media = document.createElement('div');
+      media.className = 'post-media relative';
+
+      if (it.kind === 'image') {
+        media.innerHTML = `
+          <img src="${url}" class="absolute inset-0 w-full h-full object-cover select-none" alt="${it.name}">
+        `;
+      } else if (it.kind === 'video') {
+        media.innerHTML = `
+          <video src="${url}" class="absolute inset-0 w-full h-full object-cover" controls playsinline muted loop></video>
+        `;
+      } else {
+        media.innerHTML = `
+          <div class="absolute inset-0 flex items-center justify-center text-slate-500 text-sm">
+            ${it.name}
+          </div>
+        `;
+      }
+
+      // ダブルタップでいいね
+      let tapTimer = 0;
+      media.addEventListener('click', () => {
+        const now = Date.now();
+        if (now - tapTimer < 250) { // 250ms以内をダブルタップとみなす
+          toggleLike(it.id);
+        }
+        tapTimer = now;
+      });
+
+      // アクションバー
+      const actions = document.createElement('div');
+      actions.className = 'post-actions';
+      const liked = !!it.liked;
+      const likes = it.likes || 0;
+
+      actions.innerHTML = `
+        <div class="flex items-center gap-1">
+          <button class="icon-btn" data-like aria-label="いいね">
+            <i class="${liked ? 'fas' : 'far'} fa-heart ${liked ? 'text-rose-500' : 'text-slate-700'} text-xl"></i>
+          </button>
+          <button class="icon-btn" data-comment aria-label="コメント">
+            <i class="far fa-comment text-xl text-slate-700"></i>
+          </button>
+          <button class="icon-btn" data-share aria-label="共有">
+            <i class="far fa-paper-plane text-xl text-slate-700"></i>
+          </button>
+        </div>
+        <button class="icon-btn" data-bookmark aria-label="保存">
+          <i class="far fa-bookmark text-xl text-slate-700"></i>
+        </button>
+      `;
+
+      // メタ（いいね数・キャプション）
+      const meta = document.createElement('div');
+      meta.className = 'post-meta';
+      meta.innerHTML = `
+        <div class="font-semibold">${likes.toLocaleString()}件のいいね</div>
+        <div class="post-caption">
+          ${it.caption ? it.caption.replace(/</g,'&lt;') : '<span class="text-slate-400">キャプションなし</span>'}
+        </div>
+        <div class="mt-2">
+          <button class="text-xs text-slate-500 hover:text-slate-700 underline" data-edit-caption>キャプションを編集</button>
+        </div>
+      `;
+
+      // ---- イベント付与 ----
+      // 削除
+      header.querySelector('button[title="削除"]').onclick = async ()=>{
+        const album = await loadAlbum();
+        album.items = album.items.filter(x=> x.id !== it.id);
+        album.updatedAt = Date.now();
+        await put('album', album);
+        await del('blobs', it.id);
+        await renderGallery();
+        showSaved();
+      };
+      // いいね
+      actions.querySelector('[data-like]').onclick = ()=> toggleLike(it.id);
+      // コメント（今回はキャプション編集を流用）
+      actions.querySelector('[data-comment]').onclick = ()=> editCaption(it.id);
+      meta.querySelector('[data-edit-caption]').onclick = ()=> editCaption(it.id);
+      // 共有（既存の共有リンクを呼ぶ）
+      actions.querySelector('[data-share]').onclick = ()=> document.getElementById('shareLinkBtn')?.click();
+
+      // 組み立て
+      card.appendChild(header);
+      card.appendChild(media);
+      card.appendChild(actions);
+      card.appendChild(meta);
+
+      wrap.appendChild(card);
+    }
+  }
+
+  // ---- 長押し判定用のしきい値（スマホ） ----
+  const LONG_PRESS_MS = 350;
+
+  async function renderGallery(){
+    const wrap = document.getElementById('gallery');
+    wrap.className = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4';
+    wrap.innerHTML = '';
+
+    const album = await loadAlbum();
+
+    for (const it of album.items){
+      const blobRow = await get('blobs', it.id);
+      if (!blobRow) continue;
+
+      const url = URL.createObjectURL(blobRow.data);
+
+      // カード
+      const card = document.createElement('article');
+      card.className = 'post-card';
+
+      // ヘッダー（省略可：今のままでもOK）
+      const header = document.createElement('div');
+      header.className = 'post-header';
+      header.innerHTML = `
+        <div class="w-8 h-8 rounded-full bg-slate-300"></div>
+        <div>
+          <div class="post-username">TSP ユーザー</div>
+          <div class="text-[11px] text-slate-500">${new Date(it.updatedAt || Date.now()).toLocaleString()}</div>
+        </div>
+      `;
+
+      // メディア本体（正方形＋×ボタン＋選択オーバーレイ）
+      const mediaWrap = document.createElement('div');
+      mediaWrap.className = 'media-wrap post-media rounded-xl overflow-hidden';
+      mediaWrap.dataset.id = it.id;
+
+      const overlay = document.createElement('div');
+      overlay.className = 'select-overlay';
+
+      const delBtn = document.createElement('button');
+      delBtn.className = 'del-btn';
+      delBtn.title = '削除';
+      delBtn.textContent = '×';
+
+      // 画像/動画のDOM
+      if (it.kind === 'image') {
+        mediaWrap.innerHTML = `
+          <img src="${url}" class="absolute inset-0 w-full h-full object-cover select-none" alt="${it.name}">
+        `;
+      } else if (it.kind === 'video') {
+        mediaWrap.innerHTML = `
+          <video src="${url}" class="absolute inset-0 w-full h-full object-cover" controls playsinline muted loop></video>
+        `;
+      } else {
+        mediaWrap.innerHTML = `
+          <div class="absolute inset-0 flex items-center justify-center text-slate-500 text-sm bg-slate-50">${it.name}</div>
+        `;
+      }
+
+      mediaWrap.appendChild(overlay);
+      mediaWrap.appendChild(delBtn);
+
+      // ---- 選択/解除（PCはホバーでボタン表示、モバイルは長押しでトグル） ----
+      let pressTimer = null;
+      let downAt = 0;
+
+      const onPointerDown = (e) => {
+        downAt = Date.now();
+        pressTimer = setTimeout(() => {
+          mediaWrap.classList.toggle('is-selected');
+          pressTimer = null;
+        }, LONG_PRESS_MS);
+      };
+      const onPointerUp = (e) => {
+        if (pressTimer) {
+          clearTimeout(pressTimer);
+          pressTimer = null;
+          // 短押しの場合は何もしない（いいね等と混線させない）
+        }
+      };
+      mediaWrap.addEventListener('pointerdown', onPointerDown);
+      mediaWrap.addEventListener('pointerup', onPointerUp);
+      mediaWrap.addEventListener('pointerleave', onPointerUp);
+      mediaWrap.addEventListener('pointercancel', onPointerUp);
+
+      // ---- × クリックで即削除（既存の削除ロジック流用） ----
+      delBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const yes = confirm('このメディアを削除しますか？');
+        if (!yes) return;
+
+        const album = await loadAlbum();
+        album.items = album.items.filter(x => x.id !== it.id);
+        album.updatedAt = Date.now();
+        await put('album', album);
+        await del('blobs', it.id);
         await renderGallery();
         showSaved();
       });
-    })();
+
+      // カードに組み立て
+      card.appendChild(header);
+      card.appendChild(mediaWrap);
+
+      // （任意）アクションバーやキャプションを既存通り足す場合はここに続けて appendChild
+
+      wrap.appendChild(card);
+    }
+  }
   </script>
 </body>
 </html>
